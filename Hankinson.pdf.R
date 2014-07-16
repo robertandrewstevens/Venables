@@ -1,0 +1,125 @@
+# 1 A non-linear regression: Hankinson's equation
+
+## This example comes from Williams (1959), Example 2.3, page 20, (with adaptations).
+
+## For some background information see here:
+
+## http://en.wikipedia.org/wiki/Hankinson's_equation
+
+## Hankinson's formula relates the modulus of rupture, fµ, for a timber plank to the angle of stress, µ:
+  
+## The formula may be "linearized" by taking reciprocals:
+  
+## but the error structure implied by fitting a simple regression model to this formula may be unrealistic. It may be enough to provide a starting estimate, though.
+
+## A more realistic model might be to assume a multiplicative error structure, that is, errors in the measurement of fµ tend to affect the result proportionately rather than additively:
+  
+## Taking logs converts the error structure to additive, but the parametric form for the regression model remains irreducibly non-linear:
+  
+## Data from a calibration experiement are given in Table 1, and are available as the data frame hankinson.
+
+setwd("~/Venables")
+hankinson <- read.csv("hankinson.csv", header = TRUE)
+hankinson
+
+## **Table 1**: Modulus of rupture data for calibration of Hankinson's formula
+
+hankinson <- within(hankinson, {
+  theta <- thetaDeg * base::pi/180
+  MRupture <- MRupture/2240 ## change lbs to tons
+})
+StartM <- lm(1/MRupture ~ 0+I(cos(theta)^2) + I(sin(theta)^2), hankinson)
+(f <- structure(1/coef(StartM), names = c("a1", "a2")))
+
+## We can now fit a non-linear model using these as starting values for the parameters:
+
+NonlinM <- nls(log(MRupture) ~ log(a1) + log(a2) -
+               log(a1*sin(theta)^2 + a2*cos(theta)^2), hankinson,
+               start = f, trace = FALSE)
+summary(NonlinM)
+
+## **Table 2**: Coefficient estimates from the non-linear regression
+
+## The main output is shown in Table 2.
+
+## A generalization of the model allows the power to which the trigonometric terms are raised to be a third parameter, though such refinements are rarely necessary. To check this in the present case, we fit the extended model and test the simpler model as a sub-model of it.
+
+g <- c(coef(NonlinM), p = 0)
+NonlinMg <- nls(log(MRupture) ~ log(a1) + log(a2) -
+                log(a1*sin(theta)^(2 + p) + a2*cos(theta)^(2 + p)), hankinson,
+                start = g)
+summary(NonlinMg)
+
+## **Table 3**: Coefficient estimates from the extended non-linear regression
+
+anova(NonlinM, NonlinMg)
+
+## **Table 4**: Analysis of variance table testing the standard non-linear model, (1), within the extended model, (2)
+
+## The main summary results are shown in Table 3 and the analysis of variance results in Table 4.
+
+## Now consider predictions from the standard model. First we set up a data frame with the angle µ on a one degree scale. We use the angle in degrees for plotting and the angle in radians for computations.
+
+pHankinson <- within(data.frame(thetaDeg = 0:90),
+                     theta <- thetaDeg*base::pi/180)
+pHankinson$MRupture <- exp(predict(NonlinM, pHankinson))
+
+## Note that simply back-transforming the predictions from the log scale gives an estimate of the median modulus of rupture on the natural scale, not the mean.
+
+## For standard errors we consider two forms of bootstrap estimates, first the so-called "Bayesian bootstrap", which re-fits the model using random exponential weights. These are chosen so that the weights have both mean and variance unity:
+
+nr <- nrow(hankinson)
+f <- coef(NonlinM) ### update f to the LS estimates; names are OK
+Z <- replicate(500, {
+  tmpM <- update(NonlinM, weights = rexp(nr), trace = FALSE)
+  exp(predict(tmpM, newdata = pHankinson))
+})
+lims <- apply(Z, 1, quantile, probs = c(1, 39)/40)
+pHankinson <- within(pHankinson, {
+  lowerBB <- lims[1,] ### NB results taken from the ROWS of lims
+  upperBB <- lims[2,]
+})
+rm(lims, Z)
+
+## Secondly, consider standard bootstrap estimates, where the model is re-fitted using bootstrap samples of the original data:
+
+bsample <- function(dfr) dfr[sample(nrow(dfr), replace = TRUE), ]
+Z <- replicate(500, {
+  tmpM <- update(NonlinM, data = bsample(hankinson), trace = FALSE)
+  exp(predict(tmpM, newdata = pHankinson))
+})
+lims <- apply(Z, 1, quantile, probs = c(1, 39)/40)
+pHankinson <- within(pHankinson, {
+  lower <- lims[1,]
+  upper <- lims[2,]
+})
+rm(lims, Z)
+
+## Finally we present the results in graphical form, and clean up the global environment:
+
+ylim <- with(pHankinson, range(upper, lower, upperBB, lowerBB))
+with(pHankinson, {
+  plot(thetaDeg, MRupture, type = "l", ylim = ylim, las = 1,
+       xlab = expression(theta * degree), ylab = "Modulus of rupture")
+  lines(thetaDeg, lower, col="blue", lty = "dotted")
+  lines(thetaDeg, upper, col="blue", lty = "dotted")
+  lines(thetaDeg, lowerBB, col="red", lty = "dotdash")
+  lines(thetaDeg, upperBB, col="red", lty = "dotdash")
+  points(MRupture ~ thetaDeg, hankinson, pch = 4, col = "darkgreen")
+})
+
+## **Figure 1**: Estimates of the modulus of rupture, with bootstrap confidence intervals
+
+## The result is shown in Figure 1.
+
+library(SOAR)
+Store(hankinson, pHankinson)
+rm(f,g, NonlinM, NonlinMg, StartM, ylim, nr, bsample)
+
+# Session information
+
+sessionInfo()
+
+# References
+
+## Williams, E. J. (1959). Regression Analysis. New York: Wiley.
