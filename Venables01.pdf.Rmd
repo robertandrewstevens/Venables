@@ -1,3 +1,10 @@
+---
+title: "Venables01.pdf"
+author: "Robert A. Stevens"
+date: "July 15, 2014"
+output: pdf_document
+---
+
 # R Workshop Session 1: Preliminaries
 ## Bill Venables, CSIRO, Australia
 ## UseR! 2012, Nashville, 11 June, 2012
@@ -119,6 +126,7 @@ rough_2 <- lm(log(dummyData[, 3]) ~ poly(dummyData[, 1], 4)) ## Horrible!
 ```{r}
 beta <- with(dummyData, qr.coef(qr(cbind(1, poly(x, 4))), eta))
 LModel <- lm(log(y) ~ poly(x, 4), dummyData)
+rbind(beta = as.vector(beta), beta_hat = coef(LModel))
 ```
 
 The object LModel now has information on where the data comes from.
@@ -155,8 +163,8 @@ A final look at the dummy example:
 ```{r}
 ci <- confint(LModel)
 data.frame(ci, beta = beta,
-             OK = ifelse(ci[ , 1] < beta & beta < ci[ , 2], "yes", "no"),
-             check.names = FALSE)
+           OK = ifelse(ci[ , 1] < beta & beta < ci[ , 2], "yes", "no"),
+           check.names = FALSE)
 ```
 
 # 2 Using R: some familiar concepts
@@ -177,4 +185,6 @@ Venables, W. N. and B. D. Ripley (2002). Modern Applied Statistics with S (Fourt
 
 # Session information
 
+```{r}
 sessionInfo()
+```
