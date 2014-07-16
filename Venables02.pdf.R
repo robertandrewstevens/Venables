@@ -89,8 +89,8 @@ title(main = "straight line model")
 boxcox(m2a, lambda = seq(-0.25, 0.6, len = 10))
 title(main = "quadratic model")
 
-### Assuming a straight line | a square root transformation?
-### Allowing for a quadratic response | a log transformation?
+### Assuming a straight line - a square root transformation?
+### Allowing for a quadratic response - a log transformation?
 ### Consider the effect of the transformation on residuals:
 
 mSL <- update(m1a, sqrt(.) ~ .)
