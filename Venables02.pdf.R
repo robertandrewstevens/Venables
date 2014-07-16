@@ -21,7 +21,7 @@
 ###  Density : The density of the sample, (in lbs/ft3)
 ## The problem: Build a predictor of Harndess from Density.
 
-setwd("~//Venables")
+setwd("/Users/rebeccastevens")
 janka <- read.csv("janka.csv", header=T)
 library(SOAR)
 Store(janka) ## for convenience
@@ -198,8 +198,8 @@ rm(X)
 ### Compare with the Gamma model:
 
 prVal <- with(predict(mGLM, pJanka, type = "link", se.fit = TRUE),
-                      cbind(fittedGLM = fit, lowerGLM = fit - 2*se.fit,
-                      upperGLM = fit + 2*se.fit)^2) ## inverse of sqrt
+              cbind(fittedGLM = fit, lowerGLM = fit - 2*se.fit,
+                    upperGLM = fit + 2*se.fit)^2) ## inverse of sqrt
 pJanka <- cbind(pJanka, prVal)
 ry <- with(pJanka, range(ry, fittedGLM, upperGLM, lowerGLM))
 plot(fittedGLM ~ Density, pJanka, ylab = "Hardness", type = "l",
@@ -235,7 +235,7 @@ points(Hardness ~ Density, janka, pch=20, col="red")
 
 ### Marschner, I. C. (2011, December). glm2: Fitting generalized linear
 ### models with convergence problems. The R Journal 3(2), 12-15.
-                                                         
+
 ### Rubin, D. B. (1981). The bayesian bootstrap. The Annals of
 ### Statistics 9, 130-134.
 
