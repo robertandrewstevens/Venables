@@ -90,6 +90,7 @@ rough_2 <- lm(log(dummyData[, 3]) ~ poly(dummyData[, 1], 4)) ## Horrible!
 ### Good:
 beta <- with(dummyData, qr.coef(qr(cbind(1, poly(x, 4))), eta))
 LModel <- lm(log(y) ~ poly(x, 4), dummyData)
+rbind(beta = as.vector(beta), beta_hat = coef(LModel))
 ### The object LModel now has information on where the data comes
 ### from.
 
