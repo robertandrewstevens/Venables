@@ -22,7 +22,7 @@
 ## The problem: Build a predictor of Harndess from Density.
 
 setwd("/Users/rebeccastevens")
-janka <- read.csv("janka.csv", header=T)
+janka <- read.csv("janka.csv", header = TRUE)
 library(SOAR)
 Store(janka) ## for convenience
 plot(Hardness ~ Density, janka, pch = 20, col = "red")
