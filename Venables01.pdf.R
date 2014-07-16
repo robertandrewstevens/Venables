@@ -118,8 +118,8 @@ detach("dummyData")
 ### A final look at the dummy example:
 ci <- confint(LModel)
 data.frame(ci, beta = beta,
-             OK = ifelse(ci[ , 1] < beta & beta < ci[ , 2], "yes", "no"),
-             check.names = FALSE)
+           OK = ifelse(ci[ , 1] < beta & beta < ci[ , 2], "yes", "no"),
+           check.names = FALSE)
 
 # 2 Using R: some familiar concepts
 
