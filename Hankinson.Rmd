@@ -2,7 +2,7 @@
 title: "Hankinson.pdf"
 author: "Robert A. Stevens"
 date: "Wednesday, July 16, 2014"
-output: pdf_document
+output: html_document
 ---
 
 # 1 A non-linear regression: Hankinson's equation
@@ -25,15 +25,15 @@ Taking logs converts the error structure to additive, but the parametric form fo
   
 Data from a calibration experiement are given in Table 1, and are available as the data frame hankinson.
 
-```{r}
-setwd("~/Venables")
+```{r, comment=NA}
+setwd("~/GitHub/Venables")
 hankinson <- read.csv("hankinson.csv", header = TRUE)
 hankinson
 ```
 
 **Table 1**: Modulus of rupture data for calibration of Hankinson's formula
 
-```{r}
+```{r, comment=NA}
 hankinson <- within(hankinson, {
   theta <- thetaDeg * base::pi/180
   MRupture <- MRupture/2240 ## change lbs to tons
@@ -44,7 +44,7 @@ StartM <- lm(1/MRupture ~ 0+I(cos(theta)^2) + I(sin(theta)^2), hankinson)
 
 We can now fit a non-linear model using these as starting values for the parameters:
 
-```{r}
+```{r, comment=NA}
 NonlinM <- nls(log(MRupture) ~ log(a1) + log(a2) -
                log(a1*sin(theta)^2 + a2*cos(theta)^2), hankinson,
                start = f, trace = FALSE)
@@ -57,7 +57,7 @@ The main output is shown in Table 2.
 
 A generalization of the model allows the power to which the trigonometric terms are raised to be a third parameter, though such refinements are rarely necessary. To check this in the present case, we fit the extended model and test the simpler model as a sub-model of it.
 
-```{r}
+```{r, comment=NA}
 g <- c(coef(NonlinM), p = 0)
 NonlinMg <- nls(log(MRupture) ~ log(a1) + log(a2) -
                 log(a1*sin(theta)^(2 + p) + a2*cos(theta)^(2 + p)), hankinson,
@@ -67,7 +67,7 @@ summary(NonlinMg)
 
 **Table 3**: Coefficient estimates from the extended non-linear regression
 
-```{r}
+```{r, comment=NA}
 anova(NonlinM, NonlinMg)
 ```
 
@@ -77,7 +77,7 @@ The main summary results are shown in Table 3 and the analysis of variance resul
 
 Now consider predictions from the standard model. First we set up a data frame with the angle µ on a one degree scale. We use the angle in degrees for plotting and the angle in radians for computations.
 
-```{r}
+```{r, comment=NA}
 pHankinson <- within(data.frame(thetaDeg = 0:90),
                      theta <- thetaDeg*base::pi/180)
 pHankinson$MRupture <- exp(predict(NonlinM, pHankinson))
@@ -87,7 +87,7 @@ Note that simply back-transforming the predictions from the log scale gives an e
 
 For standard errors we consider two forms of bootstrap estimates, first the so-called "Bayesian bootstrap", which re-fits the model using random exponential weights. These are chosen so that the weights have both mean and variance unity:
 
-```{r}
+```{r, comment=NA}
 nr <- nrow(hankinson)
 f <- coef(NonlinM) ### update f to the LS estimates; names are OK
 Z <- replicate(500, {
@@ -104,7 +104,7 @@ rm(lims, Z)
 
 Secondly, consider standard bootstrap estimates, where the model is re-fitted using bootstrap samples of the original data:
 
-```{r}
+```{r, comment=NA}
 bsample <- function(dfr) dfr[sample(nrow(dfr), replace = TRUE), ]
 Z <- replicate(500, {
   tmpM <- update(NonlinM, data = bsample(hankinson), trace = FALSE)
@@ -120,7 +120,7 @@ rm(lims, Z)
 
 Finally we present the results in graphical form:
 
-```{r}
+```{r, comment=NA}
 ylim <- with(pHankinson, range(upper, lower, upperBB, lowerBB))
 with(pHankinson, {
   plot(thetaDeg, MRupture, type = "l", ylim = ylim, las = 1,
@@ -139,7 +139,7 @@ The result is shown in Figure 1.
 
 Now clean up the global environment:
 
-```{r}
+```{r, comment=NA}
 library(SOAR)
 Store(hankinson, pHankinson)
 rm(f,g, NonlinM, NonlinMg, StartM, ylim, nr, bsample)
@@ -147,7 +147,7 @@ rm(f,g, NonlinM, NonlinMg, StartM, ylim, nr, bsample)
 
 # Session information
 
-```{r}
+```{r, comment=NA}
 sessionInfo()
 ```
 
