@@ -1,5 +1,5 @@
 ---
-title: "Hankinson.pdf"
+title: "Hankinson"
 author: "Robert A. Stevens"
 date: "Wednesday, July 16, 2014"
 output: html_document
