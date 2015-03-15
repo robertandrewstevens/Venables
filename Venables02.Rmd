@@ -1,5 +1,5 @@
 ---
-title: "Venables02.Rmd"
+title: "Venables02"
 author: "Robert A. Stevens"
 date: "July 15, 2014"
 output: html_document
