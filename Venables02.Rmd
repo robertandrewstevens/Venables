@@ -1,15 +1,15 @@
 ---
-title: "Venables02.pdf.Rmd"
+title: "Venables02.Rmd"
 author: "Robert A. Stevens"
 date: "July 15, 2014"
-output: pdf_document
+output: html_document
 ---
 
 # R Workshop Session 2: Linear Models and Their Allies
 
-## Bill Venables, CSIRO, Australia
+Bill Venables, CSIRO, Australia
 
-## UseR! 2012, Nashville, 11 June, 2012
+UseR! 2012, Nashville, 11 June, 2012
 
 # Contents
 
@@ -37,35 +37,35 @@ http://en.wikipedia.org/wiki/Janka_hardness_test
 
 The problem: *Build a predictor of Harndess from Density.*
 
-```{r}
-setwd("/Users/rebeccastevens")
+```{r, comment=NA}
+setwd("~/GitHub/Venables")
 janka <- read.csv("janka.csv", header = TRUE)
 library(SOAR)
-Store(janka) ## for convenience
+Store(janka) # for convenience
 par(mfrow = c(1, 1), pty = "s")
 plot(Hardness ~ Density, janka, pch = 20, col = "red")
 ```
 
-* Clearly strong dependence of Hardness on Density;
+- Clearly strong dependence of Hardness on Density;
 
-* Possibly curvilinear - try polynomials first;
+- Possibly curvilinear - try polynomials first;
 
-* Possibly with unequal variance?
+- Possibly with unequal variance?
 
-```{r}
+```{r, comment=NA}
 m1 <- lm(Hardness ~ Density, janka)
 m2 <- update(m1, . ~ . + I(Density^2))
 m3 <- update(m2, . ~ . + I(Density^3))
 round(summary(m3)$coef, 4)
 ```
 
-# 1.1 Alternative parametrizations
+## 1.1 Alternative parametrizations
 
 Nothing is "significant"! Why?
 
 A modification:
 
-```{r}
+```{r, comment=NA}
 m1a <- lm(Hardness ~ I(Density - 50), janka)
 m2a <- update(m1a, . ~ . + I((Density - 50)^2))
 m3a <- update(m2a, . ~ . + I((Density - 50)^3))
@@ -74,7 +74,7 @@ round(summary(m3a)$coef, 4)
 
 The models are fully equivalent, but the coeficients refer to different things.
 
-```{r}
+```{r, comment=NA}
 pJanka <- with(janka, data.frame(Density = seq(-5, 75)))
 pJanka <- within(pJanka, {
   pM1 <- predict(m1a, pJanka, type = "response")
@@ -95,22 +95,22 @@ legend("bottomright", c("linear", "quadratic", "cubic"),
        text.col = c("darkgreen", "blue", "gold4"), bty = "n")
 ```
 
-# 1.2 Diagnostics and corrective action
+## 1.2 Diagnostics and corrective action
 
-```{r}
+```{r, comment=NA}
 layout(matrix(1:4, 2, 2, byrow = TRUE))
 plot(m2a)
 ```
 
-# 1.3 A transformation?
+## 1.3 A transformation?
 
 The main purpose of a transformation is to provide a scale in which the response is homoscedastic | but no necessarily the only purpose.
 
 Transforming the response will affect both the mean structure and the variance.
 
-Consider a Box-Cox transformation on a) the straight line model and b) the quadratic model.
+Consider a Box-Cox transformation on (a) the straight line model and (b) the quadratic model.
 
-```{r}
+```{r, comment=NA}
 library(MASS)
 layout(matrix(1:2, 1))
 par(pty = "s")
@@ -126,7 +126,7 @@ Allowing for a quadratic response - a log transformation?
 
 Consider the effect of the transformation on residuals:
 
-```{r}
+```{r, comment=NA}
 mSL <- update(m1a, sqrt(.) ~ .)
 mQD <- update(m2a, log(.) ~ .)
 r1 <- resid(mSL)
@@ -145,19 +145,19 @@ abline(h = 0, col = "red", lty = "dashed")
 
 The message so far:
 
-* A square root transformation straightens out the regression line, but
+- A square root transformation straightens out the regression line, but
 
-* A log transformation is necessary to even out the variance.
+- A log transformation is necessary to even out the variance.
 
 This suggests a generalized linear model:
 
-* with a sqrt link, to give a scale in which the response is straight line,
+- with a sqrt link, to give a scale in which the response is straight line,
 
-* with a variance function ~ mu^2 to allow for variance heterogeneity.
+- with a variance function ~ mu^2 to allow for variance heterogeneity.
 
 Within the GLM family this suggests a Gamma model, but the sqrt link is non-standard. Oh well...
 
-```{r}
+```{r, comment=NA}
 library(glm2)
 mGLM <- glm2(Hardness ~ I(Density - 50),
              family = Gamma(link = make.link("sqrt")), data = janka)
@@ -169,7 +169,7 @@ The glm2 library, (Marschner, 2011), offers the function glm2, a drop-in replace
 
 The straight line model seems adequate - residual checks:
 
-```{r}
+```{r, comment=NA}
 rs <- resid(mGLM)
 fv <- fitted(mGLM)
 layout(matrix(1:2, 1))
@@ -182,17 +182,17 @@ qqnorm(rs, pch = 20, col = grey(0.5), xlab = "Normal scores",
 qqline(rs, col = "red", lty = "dashed")
 ```
 
-# 1.4 A simpler approach
+## 1.4 A simpler approach
 
-* What happens if we transform both response and predictor?
+- What happens if we transform both response and predictor?
 
-* A mulitplicative model seems heuristically reasonable:
+- A mulitplicative model seems heuristically reasonable:
 
-H = aD^b exp(E) -> logH = a* + b[log(D)] + E
+     H = aD^b exp(E) -> logH = a* + b[log(D)] + E
 
-* Simple back transformation will give an estimate of the median. In some cases an estimate of the mean is more appropriate. See, e.g. Shen and Zhu (2008).
+- Simple back transformation will give an estimate of the median. In some cases an estimate of the mean is more appropriate. See, e.g. Shen and Zhu (2008).
 
-```{r}
+```{r, comment=NA}
 par(mfrow = c(1, 1), pty = "s")
 plot(Hardness ~ Density, janka, log = "xy", pch=20, col = "red",
      main = "log-log scale")
@@ -201,7 +201,9 @@ round(summary(LogM)$coef, 4)
 LogM1 <- update(LogM, . ~ log(Density))
 pJanka <- data.frame(Density = 24:70) ## just covers actual range
 prVal <- with(predict(LogM1, pJanka, type = "resp", se.fit = TRUE),
-              exp(cbind(fitted = fit, lower = fit - 2*se.fit, upper = fit + 2*se.fit)))
+              exp(cbind(fitted = fit, 
+                        lower = fit - 2*se.fit, 
+                        upper = fit + 2*se.fit)))
 pJanka <- cbind(pJanka, prVal)
 ry <- with(pJanka, with(janka, range(Hardness, fitted, upper, lower)))
 plot(fitted ~ Density, pJanka, ylab = "Hardness", type = "l",
@@ -211,22 +213,22 @@ lines(lower ~ Density, pJanka, lty = "dashed", col = grey(0.75))
 points(Hardness ~ Density, janka, pch = 20, col = "red")
 ```
 
-# 1.5 Bootstrap confidence intervals
+## 1.5 Bootstrap confidence intervals
 
 To illustrate direct bootstrap computations, we choose the Bayesian Bootstrap idea of Rubin (1981).
 
-* Re-fit the model with random weights for the observations.
+- Re-fit the model with random weights for the observations.
 
-* Choosing W ~ Exp(1) gives EW = 1 = Var(W), the same as for the normal bootstrap. (Rubin gives a theoretical justification.)
+- Choosing W ~ Exp(1) gives E(W) = 1 = Var(W), the same as for the normal bootstrap. (Rubin gives a theoretical justification.)
 
-```{r}
+```{r, comment=NA}
 W <- rexp(10000)
 c(mean = mean(W), variance = var(W))
 ```
 
 We do this for the log-log model only. (For the GLM - easy exercise!)
 
-```{r}
+```{r, comment=NA}
 set.seed(1234)
 X <- replicate(500, {
   tmp <- update(LogM1, weights = rexp(nrow(janka)))
@@ -247,10 +249,11 @@ points(Hardness ~ Density, janka, pch = 20, col = "red")
 
 Compare with the Gamma model:
 
-```{r}
+```{r, comment=NA}
 prVal <- with(predict(mGLM, pJanka, type = "link", se.fit = TRUE),
-              cbind(fittedGLM = fit, lowerGLM = fit - 2*se.fit,
-                    upperGLM = fit + 2*se.fit)^2) ## inverse of sqrt
+              cbind(fittedGLM = fit, 
+                    lowerGLM = fit - 2*se.fit,
+                    upperGLM = fit + 2*se.fit)^2) # inverse of sqrt
 pJanka <- cbind(pJanka, prVal)
 ry <- with(pJanka, range(ry, fittedGLM, upperGLM, lowerGLM))
 par(mfrow = c(1, 1), pty = "s")
@@ -265,29 +268,29 @@ lines(lower ~ Density, pJanka, lty = "dotted", col = "green4")
 points(Hardness ~ Density, janka, pch=20, col="red")
 ```
 
-# 1.6 Technical highlights
+## 1.6 Technical highlights
 
-* Using *data* to load a local ".csv" file; The **SOAR** package.
+- Using *data* to load a local ".csv" file; The **SOAR** package.
 
-* **with** for local access to an object; **within** for modification of a data frame, with local access as well.
+- **with** for local access to an object; **within** for modification of a data frame, with local access as well.
 
-* **plot** methods for linear model objects.
+- **plot** methods for linear model objects.
 
-* The **layout** function for multi-frame plotting.
+- The **layout** function for multi-frame plotting.
 
-* Mathematical expressions in plot annotation.
+- Mathematical expressions in plot annotation.
 
-* The **make.link** function for generating non-standard links for GLMs; The **glm2** package for potentially troublesome GLM fits.
+- The **make.link** function for generating non-standard links for GLMs; The **glm2** package for potentially troublesome GLM fits.
 
-* Use of log scales in traditional graphics.
+- Use of log scales in traditional graphics.
 
-* Quick tests in polynomial regression using **poly**. Nested use of **with** for local access to two data frames simultaneously.
+- Quick tests in polynomial regression using **poly**. Nested use of **with** for local access to two data frames simultaneously.
 
-* The **replicate** convenience function for direct bootstrapping. The Bayesian Bootstrap idea of Rubin.
+- The **replicate** convenience function for direct bootstrapping - the Bayesian Bootstrap idea of Rubin.
 
 # References
 
-Marschner, I. C. (2011, December). glm2: Fitting generalized linear models with convergence problems. The R Journal 3(2), 12-15.
+Marschner, I. C. (2011, December). glm2: Fitting generalized linear models with convergence problems. *The R Journal* 3(2), 12-15.
 
 Rubin, D. B. (1981). The bayesian bootstrap. *The Annals of Statistics* 9, 130-134.
 
@@ -299,6 +302,6 @@ Williams, E. J. (1959). *Regression Analysis*. New York: Wiley.
 
 # Session information
 
-```{r}
+```{r, comment=NA}
 sessionInfo()
 ```
