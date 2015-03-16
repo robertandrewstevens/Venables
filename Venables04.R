@@ -1,41 +1,38 @@
 # R Workshop Session 4: Mixed Effects Models
-## Bill Venables, CSIRO, Australia
-## UseR! 2012, Nashville, 11 June, 2012
-
+# Bill Venables, CSIRO, Australia
+# UseR! 2012, Nashville, 11 June, 2012
 
 # Contents
-## 1 An introductory example: petroleum extraction
-#### 1.1 Fixed or random?
-## 2 An extended example: going fishing
-#### 2.1 A brief look at generalized linear/additive mixed models
-#### 2.2 Appendix: Two helper functions:
-## 3 Technical highlights
-## References
-## Session information
-
+# 1 An introductory example: petroleum extraction
+# 1.1 Fixed or random?
+# 2 An extended example: going fishing
+# 2.1 A brief look at generalized linear/additive mixed models
+# 2.2 Appendix: Two helper functions:
+# 3 Technical highlights
+# References
+# Session information
 
 # 1 An introductory example: petroleum extraction
 
-## The petrol data of N. L. Prater.
-## • No = crude oil sample identification label. (Factor.)
-## • SG = specific gravity, degrees API. (Constant within sample.)
-## • VP = vapour pressure in pounds per square inch. (Constant within sample.)
-## • V10 = volatility of crude; ASTM 10% point. (Constant within sample.)
-## • EP = desired volatility of gasoline. (The end point. Varies within sample.)
-## • Y = yield as a percentage of crude.
+# The petrol data of N. L. Prater.
+# - No = crude oil sample identification label. (Factor.)
+# - SG = specific gravity, degrees API. (Constant within sample.)
+# - VP = vapour pressure in pounds per square inch. (Constant within sample.)
+# - V10 = volatility of crude; ASTM 10% point. (Constant within sample.)
+# - EP = desired volatility of gasoline. (The end point. Varies within sample.)
+# - Y = yield as a percentage of crude.
 
-
-## For a description in R:
+# For a description in R:
 
 library(MASS)
 ?petrol
 head(petrol)
 
-## For a more complete description of the data and an alternative
-## (somewhat fussy) analysis see the betareg package, (Cribari-Neto and
-## Zeileis, 2010). ?GasolineYield.
+# For a more complete description of the data and an alternative
+# (somewhat fussy) analysis see the betareg package, (Cribari-Neto and
+# Zeileis, 2010). ?GasolineYield.
 
-## An initial look at the data:
+# An initial look at the data:
 
 require(lattice)
 ## lattice.options(default.theme = standard.theme(color = TRUE))
@@ -47,21 +44,19 @@ print(xyplot(Y ~ EP | No, petrol, as.table = TRUE, aspect = 1,
 petrol <- within(petrol, EPc <- EP - mean(EP)) ### for convenience
 Store(petrol)
 
-
 # 1.1 Fixed or random?
 
-## A pure fixed effects model treats the crude oil samples as independent
-## with the residual error as the only source of randomenss.
+# A pure fixed effects model treats the crude oil samples as independent
+# with the residual error as the only source of randomenss.
 
-## A random effects model treats them as possibly dependent, in that
-## they may share the value of a latent random variable, addition to the
-## residual error.
+# A random effects model treats them as possibly dependent, in that
+# they may share the value of a latent random variable, addition to the
+# residual error.
 
-## The obvious candidate predictor to be regarded as injecting an
-## additional source of randomenss is the crude oil sample indicator, No.
+# The obvious candidate predictor to be regarded as injecting an
+# additional source of randomenss is the crude oil sample indicator, No.
 
-
-## Fixed effects only.
+# Fixed effects only.
 
 options(show.signif.stars = FALSE)
 m3 <- lm(Y ~ 0 + No/EP, petrol) ## 10 ints + 10 slopes
@@ -69,9 +64,8 @@ m2 <- lm(Y ~ 0 + No + EP, petrol) ## 10 ints + 1 slope
 m1 <- lm(Y ~ 1 + SG + VP + V10 + EP, petrol) ## (1 int + 3 coeffs) + 1 slope
 anova(m1, m2, m3)
 
-## Parallel regressions, but differences between samples cannot quite be
-## explained by regression on the other variables.
-
+# Parallel regressions, but differences between samples cannot quite be
+# explained by regression on the other variables.
 
 ## Random effects alternatives:
 
@@ -80,62 +74,57 @@ Rm1 <- lmer(Y ~ 1 + SG+VP+V10 + EPc + (1|No), data = petrol)
 Rm2 <- lmer(Y ~ 1 + SG+VP+V10 + EPc + (1+EPc|No), data = petrol)
 anova(Rm1, Rm2)
 
-## Emphatically different slopes are not needed!
-
+# Emphatically different slopes are not needed!
   
-## The problem is that the variance estimates are REML rather than
-## maximum likelihood.
+# The problem is that the variance estimates are REML rather than
+# maximum likelihood.
 
 Rm1_ML <- update(Rm1, REML = FALSE)
 Rm2_ML <- update(Rm2, REML = FALSE)
 anova(Rm1_ML, Rm2_ML)
 
-## Still pretty emphatically not needed.
+# Still pretty emphatically not needed.
 
-
-## Inspecting the random effects fit:
+# Inspecting the random effects fit:
 
 print(summary(Rm1), correlation = FALSE)
 print(summary(Rm2), correlation = FALSE)
 
-## Use 'fixef' for fixed effect estimates and 'ranef' for BLUPs:
+# Use 'fixef' for fixed effect estimates and 'ranef' for BLUPs:
 
 cbind(Rm1 = ranef(Rm1)$No, Rm2 = ranef(Rm2)$No)
 
-## Variances and correlations
+# Variances and correlations
 
 VarCorr(Rm2)
 
-
 # 2 An extended example: going fishing
 
-## The Headrope data set gives catch and effort data from a prawn
-## fishery.
-## • The fishery has 7 Stock regions Tig1...Tig7, West to East.
-## • The data is for 20 seasons (YearF) 1987...2006. (Y2K = year - 2000.)
-## • There are 236 Vessels, which visit one or more stock regions
-##   within a season, each for one or more Days.
-## • The response for which a model is required is the total Catch in
-##   kg, by a vessel within a stock region for a season.
-## • Additionally the vessels have Hull size, engine Power and the
-##   Headrope length they were using recorded. 
-##   (These are constant within season, but may change between seasons.)
-
+# The Headrope data set gives catch and effort data from a prawn
+# fishery.
+# - The fishery has 7 Stock regions Tig1...Tig7, West to East.
+# - The data is for 20 seasons (YearF) 1987...2006. (Y2K = year - 2000.)
+# - There are 236 Vessels, which visit one or more stock regions
+#   within a season, each for one or more Days.
+# - The response for which a model is required is the total Catch in
+#   kg, by a vessel within a stock region for a season.
+# - Additionally the vessels have Hull size, engine Power and the
+#   Headrope length they were using recorded. 
+#   (These are constant within season, but may change between seasons.)
 
 data(Headrope)
 dim(Headrope)
 head(Headrope, 2)
-Headrope <- within(Headrope, YearF <- factor(YearF)) ## needed
+Headrope <- within(Headrope, YearF <- factor(YearF)) # needed
 Store(Headrope)
 
-## The purpose of the study was to gain some insight on the marginal
-## effect of headrope length on the catch.
+# The purpose of the study was to gain some insight on the marginal
+# effect of headrope length on the catch.
 
-## A multiplicative (log-linear) model was suggested, with additive
-## random effects for a) vessel and b) stock regions over seasons.
+# A multiplicative (log-linear) model was suggested, with additive
+# random effects for a) vessel and b) stock regions over seasons.
 
-
-## Two random effects models: the first is the simpler
+# Two random effects models: the first is the simpler
 
 HRmodel1 <- lmer(log(Catch) ~ 0 + log(Days) + Y2K + log(Head) +
                  log(Power) + log(Hull) + Stock +
@@ -143,7 +132,7 @@ HRmodel1 <- lmer(log(Catch) ~ 0 + log(Days) + Y2K + log(Head) +
 HRmodel1_ML <- update(HRmodel1, REML = FALSE)
 Store(HRmodel1)
 
-## The second has a more elaborate random effect structure:
+# The second has a more elaborate random effect structure:
   
 HRmodel2 <- lmer(log(Catch) ~ 0 + log(Days) + Y2K + log(Head) +
                  log(Power) + log(Hull) + Stock +
@@ -152,59 +141,53 @@ HRmodel2 <- lmer(log(Catch) ~ 0 + log(Days) + Y2K + log(Head) +
 HRmodel2_ML <- update(HRmodel2, REML = FALSE)
 Store(HRmodel2, HRmodel2_ML)
 
-
-## The more elaborate model seems justified by AIC, but not BIC!
+# The more elaborate model seems justified by AIC, but not BIC!
 
 anova(HRmodel1_ML, HRmodel2_ML)
 
-
-## The fixed effects estimates are very similar:
+# The fixed effects estimates are very similar:
 
 cbind(m1 = fixef(HRmodel1), m2 = fixef(HRmodel2))
 
-## Some notes:
-## • The coeficient on log(Days) is slightly larger than 1, (but
-##   significantly). A coeficient of 1 would imply that, mutatis
-##   mutandis, catch is proportional to "effort" (measured in boat days).
-## • The coeficient of Y2K suggests an average fishing power increase
-##   in the order of 2.5%-3.5% per year. This looks about right, but it
-##   is confounded with change in the stock abundance. Essentially the
-##   job of disentangling this confounding is what stock assessment is
-##   all about (and why it is so hard).
+# Some notes:
+# - The coeficient on log(Days) is slightly larger than 1, (but
+#   significantly). A coeficient of 1 would imply that, mutatis
+#   mutandis, catch is proportional to "effort" (measured in boat days).
+# - The coeficient of Y2K suggests an average fishing power increase
+#   in the order of 2.5%-3.5% per year. This looks about right, but it
+#   is confounded with change in the stock abundance. Essentially the
+#   job of disentangling this confounding is what stock assessment is
+#   all about (and why it is so hard).
 
-## For reference we include a copy of the summary of the more elaborate
-## model below.
-
+# For reference we include a copy of the summary of the more elaborate
+# model below.
 
 print(summary(HRmodel2), correlation = FALSE)
 
-
 # 2.1 A brief look at generalized linear/additive mixed models
 
-## Software for GLMMs is still somewhat developmental.
-## • glmmPQL in MASS is based on nlme, but handles general cases.
-## • glmer from the lme4 package handles some GLMMs but is
-##   restricted in the families it can take. (In particular, quasipoisson
-##   is NOT included.)
+# Software for GLMMs is still somewhat developmental.
+# - glmmPQL in MASS is based on nlme, but handles general cases.
+# - glmer from the lme4 package handles some GLMMs but is
+#   restricted in the families it can take. (In particular, quasipoisson
+#   is NOT included.)
 
-## The software for GAMMs also uses a linear ME engine.
-## • gamm from the mgcv package uses nlme engine,
-## • gamm4 from he gamm4 package (Wood, 2011), uses lme4 engine,
-##   (and so has the same limitations).
+# The software for GAMMs also uses a linear ME engine.
+# - gamm from the mgcv package uses nlme engine,
+# - gamm4 from he gamm4 package (Wood, 2011), uses lme4 engine,
+#   (and so has the same limitations).
 
-## Both gamm and gamm4 return a composite object with an lme and a
-## gam component. Manipulation is tricky.
+# Both gamm and gamm4 return a composite object with an lme and a
+# gam component. Manipulation is tricky.
 
+# To illuatrate, we construct a GLMM and a GAMM for the Tiger Prawn
+# species split example. The model structure is slightly simplified relative
+# to the working model.
 
-## To illuatrate, we construct a GLMM and a GAMM for the Tiger Prawn
-## species split example. The model structure is slightly simplified relative
-## to the working model.
+# We use two helper functions, Hyear and twoWay which will be defined
+# at the end.
 
-## We use two helper functions, Hyear and twoWay which will be defined
-## at the end.
-
-
-## First, the GlMM:
+# First, the GlMM:
 
 library(splines)
 library(MASS)
@@ -216,11 +199,10 @@ TModelGLMM <- glmmPQL(Psem/Total ~ ns(Coast, 6) + ns(Sea, 5) +
                       niter = 40, weights = Total)
 Store(TModelGLMM)
 
-## Note that the random component is defined separately from the main
-## formula, in nlme style.
+# Note that the random component is defined separately from the main
+# formula, in nlme style.
 
-
-## For a GAM with smoothed terms:
+# For a GAM with smoothed terms:
 
 library(mgcv)
 TModelGAMM <- gamm(formula = Psem/Total ~ s(Coast, k = 5) + s(Sea, k = 5) +
@@ -233,19 +215,16 @@ TModelGAMM <- gamm(formula = Psem/Total ~ s(Coast, k = 5) + s(Sea, k = 5) +
                    weights = Total)
 Store(TModelGAMM)
 
-## The random effects from these different models are quite similar. We
-## illustrate below. (We also use the thigmophobe function from the
-## plotrix package, (Lemon, 2006), to minimise clashes in annotation
-## of the poings
-
+# The random effects from these different models are quite similar. We
+# illustrate below. (We also use the thigmophobe function from the
+# plotrix package, (Lemon, 2006), to minimise clashes in annotation
+# of the poings
 
 re1 <- ranef(TModelGLMM)
 re2 <- ranef(TModelGAMM$lme)$Survey ## obscure
 re12 <- cbind(re1, re2)
 names(re12) <- c("GLMM", "GAMM")
 re12
-
-
 layout(rbind(1:2), widths = c(3.5, 1))
 library(plotrix)
 with(re12, {
@@ -259,11 +238,9 @@ with(re12, {
     sep = ": "), bty = "n")
 })
 
-
-
 # 2.2 Appendix: Two helper functions:
 
-## These are needed to define harmonic terms and interactions.
+# These are needed to define harmonic terms and interactions.
 
 Harm <- function (theta, k = 4) {
   X <- matrix(0, length(theta), 2 * k)
@@ -297,26 +274,24 @@ twoWay <- local({
     Hyear(day, k[1]) %star% ns(sea, k[2])
 })
 
-
 # 3 Technical highlights
 
-## • Slide...
+# - Slide...
 
 
 # References
 
-## Cribari-Neto, F. and A. Zeileis (2010). Beta regression in R. Journal
-## of Statistical Software 34(2), 1{24.
+# Cribari-Neto, F. and A. Zeileis (2010). Beta regression in R. Journal
+# of Statistical Software 34(2), 1{24.
 
-## Lemon, J. (2006). Plotrix: a package in the red light district of R.
-## R-News 6(4), 8{12.
+# Lemon, J. (2006). Plotrix: a package in the red light district of R.
+# R-News 6(4), 8{12.
 
-## Venables, W. N. and B. D. Ripley (2002). Modern Applied Statistics
-## with S (Fourth ed.). New York: Springer. ISBN 0-387-95457-0.
+# Venables, W. N. and B. D. Ripley (2002). Modern Applied Statistics
+# with S (Fourth ed.). New York: Springer. ISBN 0-387-95457-0.
 
-## Wood, S. (2011). gamm4: Generalized additive mixed models using
-## mgcv and lme4. CRAN. R package version 0.1-5.
-
+# Wood, S. (2011). gamm4: Generalized additive mixed models using
+# mgcv and lme4. CRAN. R package version 0.1-5.
 
 # Session information
 

@@ -1,48 +1,45 @@
 # Workshop Session 5: Tree Models and their Allies
-## Bill Venables, CSIRO, Australia
-## UseR! 2012, Nashville, 11 June, 2012
-
+# Bill Venables, CSIRO, Australia
+# UseR! 2012, Nashville, 11 June, 2012
 
 # Contents
-## 1 Trees and forests
-##   1.1 A trivial example
-## 2 Do you want a credit card?
-##   2.1 Training and test groups
-##   2.2 An initial tree model
-##   2.3 Simple bagging
-##   2.4 The actual random forest
-##   2.5 Parametric models
-##   2.6 The final reckoning
-##   2.7 Some notes on the outcome
-## 3 Technical highlights
-## References
-## Session information
-
+# 1 Trees and forests
+# 1.1 A trivial example
+# 2 Do you want a credit card?
+# 2.1 Training and test groups
+# 2.2 An initial tree model
+# 2.3 Simple bagging
+# 2.4 The actual random forest
+# 2.5 Parametric models
+# 2.6 The final reckoning
+# 2.7 Some notes on the outcome
+# 3 Technical highlights
+# References
+# Session information
 
 # 1 Trees and forests
 
-## * A technique that developed in machine learning and now widely
-##   used in data mining.
-## * The model uses recursive partitioning of the data and is a greedy
-##   algorithm.
-## * The two main types of tree models are
-##   - Regression trees - response is a continuous variable and
-##     fitting uses a least squares criterion,
-##   - Classification trees - response is a factor variable and fiting
-##     uses an entropy (multinomial likelihood) criterion.
+# - A technique that developed in machine learning and now widely
+#   used in data mining.
+# - The model uses recursive partitioning of the data and is a greedy
+#   algorithm.
+# - The two main types of tree models are
+#   + Regression trees - response is a continuous variable and
+#     fitting uses a least squares criterion,
+#   + Classification trees - response is a factor variable and fiting
+#     uses an entropy (multinomial likelihood) criterion.
 
-## * Model fitting is easy. Inference poses more of a dilemma.
-## * The tree structure is very unstable. boosting and bagging
-##   (random forests) can be useful ways around this.
-## * Two pacakges for tree models: rpart (which is part of R itself)
-##   and the older tree, (Ripley., 2012), which has an S-PLUS flavour
-##   and a few advantages for teaching.
-##   Use rpart in practice.
-  
-  
+# + Model fitting is easy. Inference poses more of a dilemma.
+# + The tree structure is very unstable. boosting and bagging
+#   (random forests) can be useful ways around this.
+# + Two pacakges for tree models: rpart (which is part of R itself)
+#   and the older tree, (Ripley., 2012), which has an S-PLUS flavour
+#   and a few advantages for teaching.
+#   Use rpart in practice.
+
 # 1.1 A trivial example
 
-## The janka data: a regression tree.
+# The janka data: a regression tree.
 
 if(require(tree)) {
   janka.tm <- tree(Hardness ~ Density, janka)
@@ -61,39 +58,35 @@ janka.rm <- rpart(Hardness ~ Density, janka,
 plot(janka.rm)
 text(janka.rm, xpd = NA)
   
-  
-## Trees need to be pruned for signal/noise improvement.
+# Trees need to be pruned for signal/noise improvement.
 
 plotcp(janka.rm)
 
-
-## The function(s) oneSERule are ours (see later).
+# The function(s) oneSERule are ours (see later).
 
 janka.rmp <- prune(janka.rm, cp = oneSERule(janka.rm))
 plot(janka.rmp)
 text(janka.rmp)
-  
 
 # 2 Do you want a credit card?
 
-## Our main example comes from a credit card marketing project in
-## Zurich. (i.e. the dark side).
-## * Response: binary variable credit.card.owner
-## * Candidate predictors: banking behaviour and personal variables
-##   made on banking customers.
-## * Problem: build a predictive model for credit card ownership.
-## * Strategies: Trees, bagged trees, random forests, glms.
+# Our main example comes from a credit card marketing project in
+# Zurich. (i.e. the dark side).
+# - Response: binary variable credit.card.owner
+# - Candidate predictors: banking behaviour and personal variables
+#   made on banking customers.
+# - Problem: build a predictive model for credit card ownership.
+# - Strategies: Trees, bagged trees, random forests, glms.
 
-## The data set is creditCards.
+# The data set is creditCards.
 data(creditCards)
 dim(creditCards)
 Store(creditCards)
-  
 
 # 2.1 Training and test groups
 
-## As an illustrative devide, we split the data into a training and a test
-## group.
+# As an illustrative devide, we split the data into a training and a test
+# group.
 
 set.seed(1234)
 nCC <- nrow(creditCards)
@@ -101,7 +94,6 @@ train <- sample(nCC, 1000)
 CCTrain <- creditCards[train, ]
 CCTest <- creditCards[-train, ]
 Store(CCTrain, CCTest) ## for safe keeping
-
 
 # 2.2 An initial tree model
 
@@ -111,23 +103,20 @@ plot(CCTree)
 text(CCTree)
 Store(CCTree)
   
-## Now check for the need to prune:
+# Now check for the need to prune:
    
 plotcp(CCTree)
 
-
-## Pruning is suggested by the "one standard error" rule.
-## Get the pruned tree:
+# Pruning is suggested by the "one standard error" rule.
+# Get the pruned tree:
 
 CCPTree <- prune(CCTree, cp = oneSERule(CCTree))
 plot(CCPTree)
 text(CCPTree)
 Store(CCPTree)
 
-
-## The "one standard error rule" function(s) are listed here for
-## completeness. The coding details are not of importantce.
-
+# The "one standard error rule" function(s) are listed here for
+# completeness. The coding details are not of importantce.
 
 oneSERule <- function (tree, f, ...)
   UseMethod("oneSERule")
@@ -138,22 +127,21 @@ oneSERule.rpart <- function (tree, f = 1, ...) {
 }
 Store(oneSERule, oneSERule.rpart) ## to make available later
 
-
 # 2.3 Simple bagging
 
-## "Bootstrap aggregation" - invented by Leo Breimann as a device to
-## stabilise tree methods and improve their predictive capacity. Very
-## much a "black box" technique.
-## * Grow a forrest of trees using bootstrap samples of the training
-##   data.
-## * For predictions average over the forrest:
-##   - For classification trees, take a majority vote,
-##   - For regression trees, take an average.
-## `Random forests', (Liaw and Wiener, 2002), is an of bagging with
-## extra protocols imposed.
+# "Bootstrap aggregation" - invented by Leo Breimann as a device to
+# stabilise tree methods and improve their predictive capacity. Very
+# much a "black box" technique.
+# - Grow a forrest of trees using bootstrap samples of the training
+#   data.
+# - For predictions average over the forrest:
+#   + For classification trees, take a majority vote,
+#   + For regression trees, take an average.
 
+# 'Random forests', (Liaw and Wiener, 2002), is an of bagging with
+# extra protocols imposed.
 
-## Consider bagging "by hand".
+# Consider bagging "by hand".
 
 bagRpart <- local({
   bsample <- function(dataFrame) # bootstrap sampling
@@ -175,8 +163,8 @@ bagRpart <- local({
   }
 })
 
+# a prediction method for the objects (somewhat tricky!)
 
-#### a prediction method for the objects (somewhat tricky!)
 predict.bagRpart <- function(object, newdata, ...) {
   X <- sapply(object, predict, newdata = newdata, type = "class")
   candidates <- levels(predict(object[[1]], type = "class"))
@@ -185,8 +173,7 @@ predict.bagRpart <- function(object, newdata, ...) {
 }
 Store(bagRpart, predict.bagRpart)
 
-
-## Now for an object or two:
+# Now for an object or two:
 
 if(!exists("CCSBag")) {
   set.seed(4321)
@@ -197,13 +184,12 @@ if(!exists("CCSBag")) {
   Store(CCSBag, CCBBag)
 }
 
-
 # 2.4 The actual random forest
 
-## The random forest package, (Liaw and Wiener, 2002), implements this
-## technology, and more, automatically. The number of trees is set to
-## 500 by default. How many times does each observation get sampled if
-## we restrict it to 100 trees?
+# The random forest package, (Liaw and Wiener, 2002), implements this
+# technology, and more, automatically. The number of trees is set to
+# 500 by default. How many times does each observation get sampled if
+# we restrict it to 100 trees?
 
 n <- nrow(CCTest)
 X <- replicate(100,
@@ -211,31 +197,28 @@ X <- replicate(100,
 (lims <- range(rowSums(X > 0)))
 rm(n, X)
 
-## So in this simulation the cases were sampled between 50 and 77 times.
-## This seems about enough.
+# So in this simulation the cases were sampled between 50 and 77 times.
+# This seems about enough.
 
-
-## We now fit the random forest.
+# We now fit the random forest.
 
 suppressPackageStartupMessages(library(randomForest))
 (CCRf <- randomForest(credit.card.owner ~ ., CCTrain, ntree = 100))
 Store(CCRf)
 
-
-## One nice by-product is variable importances.
+# One nice by-product is variable importances.
 
 v <- varImpPlot(CCRf) ## causes a plot
 v <- sort(drop(v), decreasing = TRUE)
 v[1:6]
-bestFew <- setdiff(names(v)[1:20], "current.profession") ## used later
-
+bestFew <- setdiff(names(v)[1:20], "current.profession") # used later
 
 # 2.5 Parametric models
 
-## Tree models and random forests are natural competitors to the
-## standard parametric models, notably GLMs. We begin with a naive
-## model based only on what appear good variables in the random forest,
-## and then consider other modest versions, but automatically produced.
+# Tree models and random forests are natural competitors to the
+# standard parametric models, notably GLMs. We begin with a naive
+# model based only on what appear good variables in the random forest,
+# and then consider other modest versions, but automatically produced.
 
 form <- as.formula(paste("credit.card.owner~", paste(bestFew, collapse="+")))
 Call <- substitute(glm(FORM, binomial, CCTrain), list(FORM = form))
@@ -253,10 +236,9 @@ if(!exists("CCGlmAIC")) {
   rm(start, upp)
 }
 
-
 # 2.6 The final reckoning
 
-## Now to see how things worked out this time. First a helper function
+# Now to see how things worked out this time. First a helper function
 
 Class <- function(object, newdata, ...)
   UseMethod("Class")
@@ -266,15 +248,14 @@ Class.bagRpart <- function(object, newdata, ...)
   predict(object, newdata)
 Class.randomForest <- predict
 Class.glm <- function(object, newdata, ...) {
-  ## only applies for binomial glms and symmetric link fns
+  # only applies for binomial glms and symmetric link fns
   predict(object,newdata) > 0
 }
 
-
-## The helper function Class streamlines things a bit:
+# The helper function Class streamlines things a bit:
 
 errorRate <- function(tab) 100*(1 - sum(diag(tab))/sum(tab))
-true <- CCTest$credit.card.owner #$
+true <- CCTest$credit.card.owner # $
 sort(sapply(list(Tree = CCTree,
                  Pruned = CCPTree,
                  Bagging = CCSBag,
@@ -285,37 +266,33 @@ sort(sapply(list(Tree = CCTree,
                  Glm_BIC = CCGlmBIC),
             function(x) errorRate(table(Class(x, CCTest), true))))
 
-
 # 2.7 Some notes on the outcome
 
-## * Random forests a winner, but not by much (~ 1%) and the "hand 
-##   made" versions were next in line. This is not unusual.
-##   Note that the random forest error rate was very close to the 
-##   internally estimated \out of bag" estimate from the construction 
-##   process.
-## * The tree models slightly out-performed the parametric models, but 
-##   again, not by much.
-## * Pruning did not improve the tree model, but automatic 
-##   construction was about as good as picking variables after some 
-##   data snooping! The latter is unusual.
-
+# - Random forests a winner, but not by much (~1%) and the "hand 
+#   made" versions were next in line. This is not unusual.
+#   Note that the random forest error rate was very close to the 
+#   internally estimated \out of bag" estimate from the construction 
+#   process.
+# - The tree models slightly out-performed the parametric models, but 
+#   again, not by much.
+# - Pruning did not improve the tree model, but automatic 
+#   construction was about as good as picking variables after some 
+#   data snooping! The latter is unusual.
 
 # 3 Technical highlights
 
-## Slide ...
-
+# Slide ...
 
 # References
 
-## Liaw, A. and M. Wiener (2002). Classification and regression by 
-## randomForest. R News 2(3), 18-22.
+# Liaw, A. and M. Wiener (2002). Classification and regression by 
+# randomForest. R News 2(3), 18-22.
 
-## Ripley., B. (2012). tree: Classification and regression trees. CRAN. R 
-## package version 1.0-29.
+# Ripley., B. (2012). tree: Classification and regression trees. CRAN. R 
+# package version 1.0-29.
 
-## Venables, W. N. and B. D. Ripley (2002). Modern Applied Statistics 
-## with S (Fourth ed.). New York: Springer. ISBN 0-387-95457-0.
-
+# Venables, W. N. and B. D. Ripley (2002). Modern Applied Statistics 
+# with S (Fourth ed.). New York: Springer. ISBN 0-387-95457-0.
 
 # Session information
 
