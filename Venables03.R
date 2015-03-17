@@ -60,7 +60,7 @@ BirthWt <- within(birthwt, {
   smoke <- (smoke > 0)
   ht <- (ht > 0)
   ui <- (ui > 0)
-  bwt <- NULL ## remove actual birth weight
+  bwt <- NULL # remove actual birth weight
 })
 Store(BirthWt)
 head(BirthWt, 2)
@@ -220,9 +220,11 @@ Annual <- function (day, k = 4) {  ## day of the year, starting from 0
   X 
 }
 
+setwd("~/GitHub/Venables")
+Tigers <- read.csv("Tigers.csv", header = TRUE, sep = ";")
 library(splines)
 temp <- glm(Psem/Total ~ ns(Coast, 10) + ns(Sea, 5) + ns(Depth, 5) +
-                ns(Mud, 4) + Annual(DayOfYear, 4)*Sea, family = quasibinomial,
+              ns(Mud, 4) + Annual(DayOfYear, 4)*Sea, family = quasibinomial,
               data = Tigers, trace = TRUE)  # unweighted
 Tigers$eta <- predict(temp)
 TModelGLM <- update(temp, etastart = eta, weights = Total)
@@ -235,8 +237,8 @@ nam <- nam[2:7] # terms to plot
 
 # Look at the shape of the main effect terms, to see implications:
 
-# layout(matrix(1:6, 2, 3, byrow=TRUE)) # 2 x 3 array of plots
-# termplot(TModelGLM, terms = nam, se = TRUE, rug=TRUE)
+layout(matrix(1:6, 2, 3, byrow = TRUE)) # 2 x 3 array of plots
+termplot(TModelGLM, terms = nam, se = TRUE, rug = TRUE)
 
 # 2.2 A long-term trend?
 
@@ -247,6 +249,7 @@ anova(TModelGLM, TM2, test = "F")
 
 # Significant, but is it important?
 
+layout(matrix(1, 1, 1, byrow = TRUE))
 termplot(TM2, terms = "ns(ElapsedDays, 7)", se = TRUE, rug = TRUE)
 
 # 2.3 A working GAM with new technology
@@ -282,7 +285,8 @@ TModelGAM_NS <- update(TModelGAM, . ~ . + s(ElapsedDays))  # non-stationary
 
 # Some views of the fit:
 
-png(file = "Fig/03tm2_%03d.png", height = 500, width = 900)
+Oz <- read.csv("Oz.csv", header = TRUE, sep = ";")
+#png(file = "03tm2_%03d.png", height = 500, width = 900)
 par(las = 1)
 layout(rbind(1:2))
 plot(TModelGAM_NS, select = 1, asp = 1)
@@ -298,7 +302,7 @@ vis.gam(TModelGAM_NS, view = c("DayOfYear","Depth"))
 title(main = "Day of year x Depth")
 vis.gam(TModelGAM_NS, view = c("Depth","Mud"))
 title(main = "Depth x Mud")
-dev.off()
+#dev.off()
 
 # 2.4 The spatio-temporal effect
 
@@ -306,13 +310,14 @@ dev.off()
 
 # Note that the migration effect is strongest in the Vanderlins islands region, where the Tiger prawn catch is high.
 
-# The prediction code is not shown, but the results are stored in a data frame called Data4. The graphic is generaged by:
+# The prediction code is not shown, but the results are stored in a data 
+# frame called Data4 [not provided?]. The graphic is generaged by:
 
-Attach()
-require(lattice)
-print(xyplot(Fsemi ~ DayOfYear|Place, Data4, type = "l",
-  ylab = expression(italic(P.)~~italic(semisulcatus)~~plain(proportion)), 
-  xlab = "Day of the year", aspect = 0.7))
+#Attach()
+#require(lattice)
+#print(xyplot(Fsemi ~ DayOfYear | Place, Data4, type = "l",
+#  ylab = expression(italic(P.)~~italic(semisulcatus)~~plain(proportion)), 
+#  xlab = "Day of the year", aspect = 0.7))
 
 # Note the device for mixed fonts in the annotations.
 
