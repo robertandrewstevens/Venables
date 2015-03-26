@@ -41,6 +41,10 @@
 
 # The janka data: a regression tree.
 
+setwd("~/GitHub/Venables")
+janka <- read.csv("janka.csv", header = TRUE)
+str(janka)
+
 if(require(tree)) {
   janka.tm <- tree(Hardness ~ Density, janka)
   plot(janka.tm)
@@ -62,7 +66,18 @@ text(janka.rm, xpd = NA)
 
 plotcp(janka.rm)
 
-# The function(s) oneSERule are ours (see later).
+# The function(s) oneSERule are ours.  They are listed here for
+# completeness. The coding details are not of importantce.
+
+oneSERule <- function (tree, f, ...)
+  UseMethod("oneSERule")
+oneSERule.rpart <- function (tree, f = 1, ...) {
+  cp <- data.frame(tree$cptable) #$
+  imin <- with(cp, which(xerror == min(xerror))[1])
+  with(cp, CP[which(xerror <= xerror[imin] + f * xstd[imin])[1]])
+}
+library(SOAR)
+Store(oneSERule, oneSERule.rpart) # to make available later
 
 janka.rmp <- prune(janka.rm, cp = oneSERule(janka.rm))
 plot(janka.rmp)
@@ -79,7 +94,8 @@ text(janka.rmp)
 # - Strategies: Trees, bagged trees, random forests, glms.
 
 # The data set is creditCards.
-data(creditCards)
+
+creditCards <- read.csv("creditCards.csv", header = TRUE, sep = ";")
 dim(creditCards)
 Store(creditCards)
 
@@ -93,7 +109,7 @@ nCC <- nrow(creditCards)
 train <- sample(nCC, 1000)
 CCTrain <- creditCards[train, ]
 CCTest <- creditCards[-train, ]
-Store(CCTrain, CCTest) ## for safe keeping
+Store(CCTrain, CCTest) # for safe keeping
 
 # 2.2 An initial tree model
 
@@ -114,18 +130,6 @@ CCPTree <- prune(CCTree, cp = oneSERule(CCTree))
 plot(CCPTree)
 text(CCPTree)
 Store(CCPTree)
-
-# The "one standard error rule" function(s) are listed here for
-# completeness. The coding details are not of importantce.
-
-oneSERule <- function (tree, f, ...)
-  UseMethod("oneSERule")
-oneSERule.rpart <- function (tree, f = 1, ...) {
-  cp <- data.frame(tree$cptable) #$
-  imin <- with(cp, which(xerror == min(xerror))[1])
-  with(cp, CP[which(xerror <= xerror[imin] + f * xstd[imin])[1]])
-}
-Store(oneSERule, oneSERule.rpart) # to make available later
 
 # 2.3 Simple bagging
 
@@ -192,8 +196,7 @@ if(!exists("CCSBag")) {
 # we restrict it to 100 trees?
 
 n <- nrow(CCTest)
-X <- replicate(100,
-  table(factor(sample(n, rep=TRUE), levels = 1:n)))
+X <- replicate(100, table(factor(sample(n, rep = TRUE), levels = 1:n)))
 (lims <- range(rowSums(X > 0)))
 rm(n, X)
 
@@ -220,10 +223,11 @@ bestFew <- setdiff(names(v)[1:20], "current.profession") # used later
 # model based only on what appear good variables in the random forest,
 # and then consider other modest versions, but automatically produced.
 
-form <- as.formula(paste("credit.card.owner~", paste(bestFew, collapse="+")))
+form <- as.formula(paste("credit.card.owner ~", paste(bestFew, collapse = "+")))
 Call <- substitute(glm(FORM, binomial, CCTrain), list(FORM = form))
 CCGlmNaive <- eval(Call)
 Store(CCGlmNaive)
+library(MASS)
 if(!exists("CCGlmAIC")) {
   upp <- paste("~", paste(setdiff(names(CCTrain), "credit.card.owner"),
                collapse = "+"))
