@@ -35,13 +35,14 @@ head(petrol)
 # An initial look at the data:
 
 require(lattice)
-## lattice.options(default.theme = standard.theme(color = TRUE))
+# lattice.options(default.theme = standard.theme(color = TRUE))
 print(xyplot(Y ~ EP | No, petrol, as.table = TRUE, aspect = 1,
               panel = function(x, y, ...) {
                 panel.xyplot(x, y, ...)
                 panel.lmline(x, y)
               }))
 petrol <- within(petrol, EPc <- EP - mean(EP)) ### for convenience
+library(SOAR)
 Store(petrol)
 
 # 1.1 Fixed or random?
@@ -59,19 +60,20 @@ Store(petrol)
 # Fixed effects only.
 
 options(show.signif.stars = FALSE)
-m3 <- lm(Y ~ 0 + No/EP, petrol) ## 10 ints + 10 slopes
-m2 <- lm(Y ~ 0 + No + EP, petrol) ## 10 ints + 1 slope
-m1 <- lm(Y ~ 1 + SG + VP + V10 + EP, petrol) ## (1 int + 3 coeffs) + 1 slope
+m3 <- lm(Y ~ 0 + No/EP, petrol) # 10 ints + 10 slopes
+m2 <- lm(Y ~ 0 + No + EP, petrol) # 10 ints + 1 slope
+m1 <- lm(Y ~ 1 + SG + VP + V10 + EP, petrol) # (1 int + 3 coeffs) + 1 slope
 anova(m1, m2, m3)
 
 # Parallel regressions, but differences between samples cannot quite be
 # explained by regression on the other variables.
 
-## Random effects alternatives:
+# Random effects alternatives:
 
-suppressPackageStartupMessages(library(lme4)) ## alt. nlme
-Rm1 <- lmer(Y ~ 1 + SG+VP+V10 + EPc + (1|No), data = petrol)
-Rm2 <- lmer(Y ~ 1 + SG+VP+V10 + EPc + (1+EPc|No), data = petrol)
+suppressPackageStartupMessages(library(lme4)) # alt. nlme
+
+Rm1 <- lmer(Y ~ 1 + SG + VP + V10 + EPc + (1|No), data = petrol)
+Rm2 <- lmer(Y ~ 1 + SG + VP + V10 + EPc + (1 + EPc|No), data = petrol)
 anova(Rm1, Rm2)
 
 # Emphatically different slopes are not needed!
@@ -112,7 +114,8 @@ VarCorr(Rm2)
 #   Headrope length they were using recorded. 
 #   (These are constant within season, but may change between seasons.)
 
-data(Headrope)
+setwd("~/GitHub/Venables")
+Headrope <- read.csv("Headrope.csv", header = TRUE, sep = ";")
 dim(Headrope)
 head(Headrope, 2)
 Headrope <- within(Headrope, YearF <- factor(YearF)) # needed
@@ -184,13 +187,14 @@ print(summary(HRmodel2), correlation = FALSE)
 # species split example. The model structure is slightly simplified relative
 # to the working model.
 
-# We use two helper functions, Hyear and twoWay which will be defined
+# We use two helper functions, Hyear and twoWay are defined
 # at the end.
 
 # First, the GlMM:
 
 library(splines)
 library(MASS)
+Tigers <- read.csv("Tigers.csv", header = TRUE, sep = ";")
 TModelGLMM <- glmmPQL(Psem/Total ~ ns(Coast, 6) + ns(Sea, 5) +
                       twoWay(DayOfYear, Sea) + ns(Depth, k = 5) +
                       Hyear(DayOfYear, 2) + ns(Mud, k = 5),

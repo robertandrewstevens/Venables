@@ -125,7 +125,7 @@ oneSERule.rpart <- function (tree, f = 1, ...) {
   imin <- with(cp, which(xerror == min(xerror))[1])
   with(cp, CP[which(xerror <= xerror[imin] + f * xstd[imin])[1]])
 }
-Store(oneSERule, oneSERule.rpart) ## to make available later
+Store(oneSERule, oneSERule.rpart) # to make available later
 
 # 2.3 Simple bagging
 
@@ -177,7 +177,7 @@ Store(bagRpart, predict.bagRpart)
 
 if(!exists("CCSBag")) {
   set.seed(4321)
-  Obj <- update(CCTree, cp = 0.005, minsplit = 9) ## expand the tree
+  Obj <- update(CCTree, cp = 0.005, minsplit = 9) # expand the tree
   CCSBag <- bagRpart(Obj, nBags = 100)
   CCBBag <- bagRpart(Obj, nBags = 100, type = "bayes")
   rm(Obj)
