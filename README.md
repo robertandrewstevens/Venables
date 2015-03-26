@@ -1,4 +1,4 @@
 Venables
 ========
 
-R files for Venables tuturial examples
+R files for Venables tutorial examples
