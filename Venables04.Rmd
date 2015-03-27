@@ -13,13 +13,13 @@ UseR! 2012, Nashville, 11 June, 2012
 
 # Contents
 
-1   An introductory example: petroleum extraction  
-1.1 Fixed or random?  
-2   An extended example: going fishing  
-2.1 A brief look at generalized linear/additive mixed models  
-3   Technical highlights  
-References  
-Session information
+    1   An introductory example: petroleum extraction  
+    1.1 Fixed or random?  
+    2   An extended example: going fishing  
+    2.1 A brief look at generalized linear/additive mixed models  
+    3   Technical highlights  
+    References  
+    Session information
 
 # 1 An introductory example: petroleum extraction
 
