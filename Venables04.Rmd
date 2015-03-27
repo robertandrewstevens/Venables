@@ -1,0 +1,323 @@
+---
+title: "Venables04"
+author: "Robert A. Stevens"
+date: "March 26, 2015"
+output: html_document
+---
+
+# R Workshop Session 4: Mixed Effects Models
+
+Bill Venables, CSIRO, Australia
+
+UseR! 2012, Nashville, 11 June, 2012
+
+# Contents
+
+1   An introductory example: petroleum extraction  
+1.1 Fixed or random?  
+2   An extended example: going fishing  
+2.1 A brief look at generalized linear/additive mixed models  
+3   Technical highlights  
+References  
+Session information
+
+# 1 An introductory example: petroleum extraction
+
+The petrol data of N. L. Prater.
+
+- No = crude oil sample identification label. (Factor.)
+
+- SG = specific gravity, degrees API. (Constant within sample.)
+
+- VP = vapour pressure in pounds per square inch. (Constant within sample.)
+
+- V10 = volatility of crude; ASTM 10% point. (Constant within sample.)
+
+- EP = desired volatility of gasoline. (The end point. Varies within sample.)
+
+- Y = yield as a percentage of crude.
+
+For a description in **R**:
+
+```{r, comment=NA}
+library(MASS)
+?petrol
+head(petrol)
+```
+
+For a more complete description of the data and an alternative (somewhat fussy) analysis see the betareg package, (Cribari-Neto and Zeileis, 2010). ?GasolineYield.
+
+An initial look at the data:
+
+```{r, comment=NA}
+require(lattice)
+# lattice.options(default.theme = standard.theme(color = TRUE))
+print(xyplot(Y ~ EP | No, petrol, as.table = TRUE, aspect = 1,
+              panel = function(x, y, ...) {
+                panel.xyplot(x, y, ...)
+                panel.lmline(x, y)
+              }))
+petrol <- within(petrol, EPc <- EP - mean(EP)) # for convenience
+library(SOAR)
+Store(petrol)
+```
+
+## 1.1 Fixed or random?
+
+A pure fixed effects model treats the crude oil samples as independent with the residual error as the only source of randomenss.
+
+A random effects model treats them as possibly dependent, in that they may share the value of a latent random variable, addition to the residual error.
+
+The obvious candidate predictor to be regarded as injecting an additional source of randomenss is the crude oil sample indicator, No.
+
+Fixed effects only.
+
+```{r, comment=NA}
+options(show.signif.stars = FALSE)
+m3 <- lm(Y ~ 0 + No/EP, petrol) # 10 ints + 10 slopes
+m2 <- lm(Y ~ 0 + No + EP, petrol) # 10 ints + 1 slope
+m1 <- lm(Y ~ 1 + SG + VP + V10 + EP, petrol) # (1 int + 3 coeffs) + 1 slope
+anova(m1, m2, m3)
+```
+
+Parallel regressions, but differences between samples cannot quite be explained by regression on the other variables.
+
+Random effects alternatives:
+
+```{r, comment=NA}
+suppressPackageStartupMessages(library(lme4)) # alt. nlme
+Rm1 <- lmer(Y ~ 1 + SG + VP + V10 + EPc + (1|No), data = petrol)
+Rm2 <- lmer(Y ~ 1 + SG + VP + V10 + EPc + (1 + EPc|No), data = petrol)
+anova(Rm1, Rm2)
+```
+
+Emphatically different slopes are not needed!
+  
+The problem is that the variance estimates are REML rather than maximum likelihood.
+
+```{r, comment=NA}
+Rm1_ML <- update(Rm1, REML = FALSE)
+Rm2_ML <- update(Rm2, REML = FALSE)
+anova(Rm1_ML, Rm2_ML)
+```
+
+Still pretty emphatically not needed.
+
+Inspecting the random effects fit:
+
+```{r, comment=NA}
+print(summary(Rm1), correlation = FALSE)
+print(summary(Rm2), correlation = FALSE)
+```
+
+Use 'fixef' for fixed effect estimates and 'ranef' for BLUPs:
+
+```{r, comment=NA}
+cbind(Rm1 = ranef(Rm1)$No, Rm2 = ranef(Rm2)$No)
+```
+
+Variances and correlations
+
+```{r, comment=NA}
+VarCorr(Rm2)
+```
+
+# 2 An extended example: going fishing
+
+The Headrope data set gives catch and effort data from a prawn fishery.
+
+- The fishery has 7 Stock regions Tig1...Tig7, West to East.
+
+- The data is for 20 seasons (YearF) 1987...2006. (Y2K = year - 2000.)
+
+- There are 236 Vessels, which visit one or more stock regions within a season, each for one or more Days.
+
+- The response for which a model is required is the total Catch in kg, by a vessel within a stock region for a season.
+
+- Additionally the vessels have Hull size, engine Power and the Headrope length they were using recorded. (These are constant within season, but may change between seasons.)
+
+```{r, comment=NA}
+setwd("~/GitHub/Venables")
+Headrope <- read.csv("Headrope.csv", header = TRUE, sep = ";")
+dim(Headrope)
+head(Headrope, 2)
+Headrope <- within(Headrope, YearF <- factor(YearF)) # needed
+Store(Headrope)
+```
+
+The purpose of the study was to gain some insight on the marginal effect of headrope length on the catch.
+
+A multiplicative (log-linear) model was suggested, with additive random effects for a) vessel and b) stock regions over seasons.
+
+Two random effects models: the first is the simpler
+
+```{r, comment=NA}
+HRmodel1 <- lmer(log(Catch) ~ 0 + log(Days) + Y2K + log(Head) +
+                 log(Power) + log(Hull) + Stock +
+                 (1|Vessel) + (1|YearF/Stock), Headrope)
+HRmodel1_ML <- update(HRmodel1, REML = FALSE)
+Store(HRmodel1)
+```
+
+The second has a more elaborate random effect structure:
+
+```{r, comment=NA}
+HRmodel2 <- lmer(log(Catch) ~ 0 + log(Days) + Y2K + log(Head) +
+                 log(Power) + log(Hull) + Stock +
+                 (1|Vessel) + (0 + Stock|YearF),
+                 data = Headrope)
+HRmodel2_ML <- update(HRmodel2, REML = FALSE)
+Store(HRmodel2, HRmodel2_ML)
+```
+
+The more elaborate model seems justified by AIC, but not BIC!
+
+```{r, comment=NA}
+anova(HRmodel1_ML, HRmodel2_ML)
+```
+
+The fixed effects estimates are very similar:
+
+```{r, comment=NA}
+cbind(m1 = fixef(HRmodel1), m2 = fixef(HRmodel2))
+```
+
+Some notes:
+
+- The coeficient on log(Days) is slightly larger than 1, (but significantly). A coeficient of 1 would imply that, mutatis mutandis, catch is proportional to "effort" (measured in boat days).
+
+- The coeficient of Y2K suggests an average fishing power increase in the order of 2.5%-3.5% per year. This looks about right, but it is confounded with change in the stock abundance. Essentially the job of disentangling this confounding is what stock assessment is all about (and why it is so hard).
+
+For reference we include a copy of the summary of the more elaborat model below.
+
+```{r, comment=NA}
+print(summary(HRmodel2), correlation = FALSE)
+```
+
+## 2.1 A brief look at generalized linear/additive mixed models
+
+Software for GLMMs is still somewhat developmental.
+
+- glmmPQL in MASS is based on nlme, but handles general cases.
+
+- glmer from the lme4 package handles some GLMMs but is restricted in the families it can take. (In particular, quasipoisson is NOT included.)
+
+The software for GAMMs also uses a linear ME engine.
+
+- gamm from the mgcv package uses nlme engine,
+
+- gamm4 from the gamm4 package (Wood, 2011) uses the lme4 engine (and so has the same limitations).
+
+Both gamm and gamm4 return a composite object with an lme and a gam component. Manipulation is tricky.
+
+To illuatrate, we construct a GLMM and a GAMM for the Tiger Prawn species split example. The model structure is slightly simplified relative to the working model.
+
+We use two helper functions, Hyear and twoWay. These are needed to define harmonic terms and interactions.
+
+```{r, comment=NA}
+Harm <- function (theta, k = 4) {
+  X <- matrix(0, length(theta), 2 * k)
+  nam <- as.vector(outer(c("c", "s"), 1:k, paste, sep = ""))
+  dimnames(X) <- list(names(theta), nam)
+  m <- 0
+  for (j in 1:k) {
+    X[, (m <- m + 1)] <- cos(j * theta)
+    X[, (m <- m + 1)] <- sin(j * theta)
+  }
+  X
+}
+
+Hyear <- function(x, k = 4)
+  Harm(2*base::pi*x/365.25, k)
+
+twoWay <- local({
+  `%star%` <- function(X, Y) {
+    X <- as.matrix(X)
+    Y <- as.matrix(Y)
+    stopifnot(is.numeric(X), is.numeric(Y),
+      nrow(X) == nrow(Y))
+    XY <- matrix(NA, nrow(X), ncol(X)*ncol(Y))
+    k <- 0
+    for(i in 1:ncol(X))
+      for(j in 1:ncol(Y)) {
+        k <- k+1
+        XY[, k] <- X[, i] * Y[, j]
+      }
+    XY
+  }
+  function(day, sea, k = c(3,2))
+    Hyear(day, k[1]) %star% ns(sea, k[2])
+})
+```
+
+First, the GlMM:
+
+```{r, comment=NA}
+library(splines)
+library(MASS)
+Tigers <- read.csv("Tigers.csv", header = TRUE, sep = ";")
+TModelGLMM <- glmmPQL(Psem/Total ~ ns(Coast, 6) + ns(Sea, 5) +
+                      twoWay(DayOfYear, Sea) + ns(Depth, k = 5) +
+                      Hyear(DayOfYear, 2) + ns(Mud, k = 5),
+                      random = ~1|Survey,
+                      family = quasibinomial, data = Tigers,
+                      niter = 40, weights = Total)
+Store(TModelGLMM)
+```
+
+Note that the random component is defined separately from the main formula, in nlme style.
+
+For a GAM with smoothed terms:
+
+```{r, comment=NA}
+library(mgcv)
+TModelGAMM <- gamm(formula = Psem/Total ~ s(Coast, k = 5) + s(Sea, k = 5) +
+                   twoWay(DayOfYear, Sea) +
+                   s(DayOfYear, k = 5, bs = "cc") + s(Depth, k = 5) +
+                   s(Mud, k = 5),
+                   random = list(Survey = ~1),
+                   family = quasibinomial, data = Tigers,
+                   niterPQL = 40,
+                   weights = Total)
+Store(TModelGAMM)
+```
+
+The random effects from these different models are quite similar. We illustrate below. (We also use the thigmophobe function from the plotrix package, (Lemon, 2006), to minimise clashes in annotation of the poings
+
+```{r, comment=NA}
+re1 <- ranef(TModelGLMM)
+re2 <- ranef(TModelGAMM$lme)$Survey ## obscure
+re12 <- cbind(re1, re2)
+names(re12) <- c("GLMM", "GAMM")
+re12
+layout(rbind(1:2), widths = c(3.5, 1))
+library(plotrix)
+with(re12, {
+  nos <- seq_along(GLMM)
+  plot(GLMM ~ GAMM, pch = 20, col = "red", bty = "n")
+  pos <- thigmophobe(GAMM, GLMM)
+  text(GLMM ~ GAMM, labels = nos, xpd = NA, pos = pos)
+  par(mar = c(0,0,0,0), xpd = NA)
+  frame()
+  legend("center", paste(format(nos), rownames(re12),
+    sep = ": "), bty = "n")
+})
+```
+
+# 3 Technical highlights
+
+- TBD
+
+# References
+
+Cribari-Neto, F. and A. Zeileis (2010). Beta regression in **R**. *Journal of Statistical Software* 34(2), 1{24.
+
+Lemon, J. (2006). Plotrix: a package in the red light district of R. *R-News* 6(4), 8{12.
+
+Venables, W. N. and B. D. Ripley (2002). *Modern Applied Statistics with S* (Fourth ed.). New York: Springer. ISBN 0-387-95457-0.
+
+Wood, S. (2011). *gamm4: Generalized additive mixed models using mgcv and lme4*. CRAN. R package version 0.1-5.
+
+# Session information
+
+sessionInfo()
